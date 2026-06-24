@@ -105,11 +105,30 @@ export default function Home() {
         normalisedData.thumbnail = data.cover || data.origin_cover;
         if (data.play) normalisedData.links.push({ type: 'MP4', label: 'Video (No Watermark)', url: data.play });
         if (data.music) normalisedData.links.push({ type: 'MP3', label: 'Audio', url: data.music });
-      } else if (platform === 'ig') {
+           } else if (platform === 'ig') {
         normalisedData.title = 'Instagram Media';
-        // Needs adjustment based on actual IG API schema from RapidAPI
-        if (data.media_url) normalisedData.links.push({ type: 'MP4', label: 'Video', url: data.media_url });
-        if (data.thumbnail_url) normalisedData.thumbnail = data.thumbnail_url;
+        
+        // Dig into common RapidAPI IG structures
+        const igData = data.data || data.result || data[0] || data;
+        
+        // Try to find the video URL
+        if (igData.video_url) {
+          normalisedData.links.push({ type: 'MP4', label: 'Video (HD)', url: igData.video_url });
+        } else if (igData.media_url) {
+          normalisedData.links.push({ type: 'MP4', label: 'Video', url: igData.media_url });
+        } else if (igData.url) {
+          normalisedData.links.push({ type: 'MP4', label: 'Video', url: igData.url });
+        } else if (igData.video_versions && igData.video_versions.length > 0) {
+          normalisedData.links.push({ type: 'MP4', label: 'Video', url: igData.video_versions[0].url });
+        }
+
+        // Try to find the thumbnail
+        normalisedData.thumbnail = igData.thumbnail_url || igData.cover_url || igData.display_url || '';
+
+        // Debugging: If still no links, print the raw API response so we can fix it!
+        if (normalisedData.links.length === 0) {
+          throw new Error('IG API Data: ' + JSON.stringify(data).substring(0, 150));
+        }
       } else if (platform === 'yt') {
          normalisedData.title = data.title || 'YouTube Video';
          if (data.thumbnail) normalisedData.thumbnail = data.thumbnail;
